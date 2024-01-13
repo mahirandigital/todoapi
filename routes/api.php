@@ -19,5 +19,6 @@ Route::post('/login', [Controller::class, 'login']);
 Route::post('/register', [Controller::class, 'register']);
 Route::post('/create', [Controller::class, 'createTodo']);
 Route::get('/read', [Controller::class, 'readTodo']);
-Route::put('/update/{id}', [Controller::class, 'updateTodo']);
-Route::delete('/delete/{id}', [Controller::class, 'deleteTodo']);
+Route::get('/readAll', [Controller::class, 'readTodos']);
+Route::put('/update', [Controller::class, 'updateTodo']);
+Route::delete('/delete', [Controller::class, 'deleteTodo']);

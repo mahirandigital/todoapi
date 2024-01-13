@@ -77,18 +77,95 @@ class Controller extends BaseController
                 'description' => $validated['description'],
             ]
         );
-        Log::info(json_encode($todo->is_checked));
+        $todo->is_checked = false;
 
         return $this->return_api(true, Response::HTTP_OK, null, $todo, null);
     }
-    public function readTodo()
+
+    public function readTodo(Request $request)
     {
+        if ($request->hasHeader('user_id')) {
+            $uid = $request->header('user_id');
+            if ($request->id == null) {
+                return $this->return_api(false, Response::HTTP_UNPROCESSABLE_ENTITY, "Parameter Id is required", null, null);
+            }
+            $todo = Todo::where('user_id', $uid)->where('id', $request->id)->first();
+            if (!$todo) {
+                return $this->return_api(false, Response::HTTP_NOT_FOUND, "Todo with the Id not found", null, null);
+            }
+            return $this->return_api(true, Response::HTTP_OK, null, $todo, null);
+        }
+
+        return $this->return_api(false, Response::HTTP_UNAUTHORIZED, "Unauthorized access", null, null);
     }
-    public function updateTodo()
+
+    public function readTodos(Request $request)
     {
+        if ($request->hasHeader('user_id')) {
+            $uid = $request->header('user_id');
+            $todos = Todo::where('user_id', $uid)->get();
+            return $this->return_api(true, Response::HTTP_OK, null, $todos, null);
+        }
+
+        return $this->return_api(false, Response::HTTP_UNAUTHORIZED, "Unauthorized access", null, null);
     }
-    public function deleteTodo()
+
+    public function updateTodo(Request $request)
     {
+        if ($request->hasHeader('user_id')) {
+            $uid = $request->header('user_id');
+            // Validate email and password
+            $validator = Validator::make($request->all(), [
+                'title' => 'nullable|string',
+                'description' => 'required|string',
+                'is_checked' => 'nullable|boolean',
+                'id' => 'required',
+            ]);
+
+            // Return errors if validation failed
+            if ($validator->fails()) {
+                return $this->return_api(false, Response::HTTP_UNPROCESSABLE_ENTITY, null, null, $validator->errors());
+            }
+
+            $validated = $validator->validated();
+
+            $todo = Todo::where('user_id', $uid)
+                ->where('id', $validated['id'])
+                ->first();
+
+            if (!$todo) {
+                return $this->return_api(false, Response::HTTP_NOT_FOUND, "Todo with the Id not found", null, null);
+            }
+
+            $todo->update([
+                'title' => $validated['title'] ?? $todo->title,
+                'description' => $validated['description'] ?? $todo->description,
+                'is_checked' => $validated['is_checked'] ?? $todo->is_checked,
+            ]);
+
+            return $this->return_api(true, Response::HTTP_OK, "Todo updated", ['id' => $todo->id], null);
+        }
+
+        return $this->return_api(false, Response::HTTP_UNAUTHORIZED, "Unauthorized access", null, null);
+    }
+
+    public function deleteTodo(Request $request)
+    {
+        if ($request->hasHeader('user_id')) {
+            $uid = $request->header('user_id');
+            if ($request->id == null) {
+                return $this->return_api(false, Response::HTTP_UNPROCESSABLE_ENTITY, "Parameter Id is required", null, null);
+            }
+            $todo = Todo::where('user_id', $uid)->where('id', $request->id)->first();
+            if ($todo == null) {
+                return $this->return_api(false, Response::HTTP_NOT_FOUND, "Todo with the Id not found", null, null);
+            }
+
+            $todo->delete();
+            return $this->return_api(true, Response::HTTP_OK, "Todo deleted", ['id' => $todo->id], null);
+        }
+
+        return $this->return_api(false, Response::HTTP_UNAUTHORIZED, "Unauthorized access", null, null);
     }
 
     public function register(Request $request)
